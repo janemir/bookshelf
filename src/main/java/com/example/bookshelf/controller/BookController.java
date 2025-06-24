@@ -4,6 +4,7 @@ import com.example.bookshelf.dto.BookRequest;
 import com.example.bookshelf.dto.BookResponse;
 import com.example.bookshelf.service.BookService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,6 +16,7 @@ public class BookController {
     private final BookService bookService;
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public BookResponse createBook(@RequestBody BookRequest request) {
         return bookService.createBook(request);
     }
@@ -30,11 +32,15 @@ public class BookController {
     }
 
     @PutMapping("/{id}")
-    public BookResponse updateBook(@PathVariable Long id, @RequestBody BookRequest request) {
+    public BookResponse updateBook(
+            @PathVariable Long id,
+            @RequestBody BookRequest request
+    ) {
         return bookService.updateBook(id, request);
     }
 
     @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteBook(@PathVariable Long id) {
         bookService.deleteBook(id);
     }

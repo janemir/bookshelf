@@ -13,31 +13,32 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class BookServiceImpl implements BookService {
     private final BookRepository bookRepository;
 
     @Override
     @Transactional
     public BookResponse createBook(BookRequest request) {
-        BookEntity book = new BookEntity();
-        book.setTitle(request.getTitle());
-        book.setAuthor(request.getAuthor());
-        book.setDescription(request.getDescription());
+        BookEntity book = BookEntity.builder()
+                .title(request.getTitle())
+                .author(request.getAuthor())
+                .description(request.getDescription())
+                .build();
 
         BookEntity savedBook = bookRepository.save(book);
         return convertToResponse(savedBook);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<BookResponse> getAllBooks() {
-        return bookRepository.findAll()
-                .stream()
+        return bookRepository.findAll().stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
+    @Transactional(readOnly = true)
     public BookResponse getBookById(Long id) {
         BookEntity book = bookRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Book not found with id: " + id));
@@ -61,9 +62,7 @@ public class BookServiceImpl implements BookService {
     @Override
     @Transactional
     public void deleteBook(Long id) {
-        BookEntity book = bookRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Book not found with id: " + id));
-        bookRepository.delete(book);
+        bookRepository.deleteById(id);
     }
 
     private BookResponse convertToResponse(BookEntity entity) {
