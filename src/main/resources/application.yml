@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5433/bookshelf
-    username: postgres
-    password: Miro$hnik2005
+    url: jdbc:postgresql://localhost:5433/bookshelf?currentSchema=public
+    username: bookshelf_app
+    password: password1029384756
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -12,11 +12,22 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        default_schema: public
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
 
 logging:
   level:
     org.hibernate.SQL: DEBUG
     org.hibernate.type: TRACE
+    org.springframework.security: INFO
 
 server:
   port: 8080
