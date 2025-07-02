@@ -1,7 +1,11 @@
 package com.example.bookshelf.service.auth;
 
+import io.jsonwebtoken.Jwts;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import io.jsonwebtoken.SignatureAlgorithm;
+import java.util.Date;
 
 @Service
 @RequiredArgsConstructor

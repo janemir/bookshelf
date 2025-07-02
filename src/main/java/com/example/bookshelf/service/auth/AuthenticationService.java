@@ -1,6 +1,15 @@
 package com.example.bookshelf.service.auth;
 
+import com.example.bookshelf.dto.AuthenticationRequest;
+import com.example.bookshelf.dto.AuthenticationResponse;
+import com.example.bookshelf.dto.RegisterRequest;
+import com.example.bookshelf.entity.Role;
+import com.example.bookshelf.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -18,9 +27,11 @@ public class AuthenticationService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.USER)
+                .enabled(false) // Пользователь не активен до подтверждения email
                 .build();
 
         userRepository.save(user);
+        emailVerificationService.sendVerificationEmail(user); // Добавьте этот вызов
 
         var jwtToken = jwtService.generateToken(user);
         return AuthenticationResponse.builder()

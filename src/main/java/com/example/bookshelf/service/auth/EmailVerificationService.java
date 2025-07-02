@@ -1,8 +1,16 @@
 package com.example.bookshelf.service.auth;
 
+import com.example.bookshelf.entity.User;
+import com.example.bookshelf.entity.VerificationToken;
+import com.example.bookshelf.repository.UserRepository;
+import com.example.bookshelf.repository.VerificationTokenRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
