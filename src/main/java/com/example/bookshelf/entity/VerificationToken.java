@@ -1,14 +1,7 @@
 package com.example.bookshelf.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.OneToOne;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
+import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -28,4 +21,11 @@ public class VerificationToken {
     private User user;
 
     private LocalDateTime expiryDate;
+
+    // Добавленный конструктор
+    public VerificationToken(String token, User user) {
+        this.token = token;
+        this.user = user;
+        this.expiryDate = LocalDateTime.now().plusDays(1); // Токен действителен 24 часа
+    }
 }

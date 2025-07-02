@@ -4,11 +4,11 @@ import com.example.bookshelf.dto.AuthenticationRequest;
 import com.example.bookshelf.dto.AuthenticationResponse;
 import com.example.bookshelf.dto.RegisterRequest;
 import com.example.bookshelf.entity.Role;
+import com.example.bookshelf.entity.User;
 import com.example.bookshelf.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +20,7 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final EmailVerificationService emailVerificationService;
 
     public AuthenticationResponse register(RegisterRequest request) {
         var user = User.builder()
@@ -27,7 +28,7 @@ public class AuthenticationService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.USER)
-                .enabled(false) // Пользователь не активен до подтверждения email
+                .enabled(false)
                 .build();
 
         userRepository.save(user);
