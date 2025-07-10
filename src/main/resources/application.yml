@@ -44,7 +44,7 @@ logging:
   level:
     org.hibernate.SQL: DEBUG
     org.hibernate.type: TRACE
-    org.springframework.security: INFO
+    org.springframework.security: DEBUG
     com.example.bookshelf: DEBUG
 
 springdoc:
@@ -54,6 +54,7 @@ springdoc:
     operations-sorter: alpha
     tags-sorter: alpha
     doc-expansion: none
+    base-url: /api
   api-docs:
     path: /v3/api-docs
   show-actuator: true
