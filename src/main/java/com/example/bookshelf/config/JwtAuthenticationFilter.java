@@ -1,4 +1,4 @@
-package com.example.bookshelf.config;
+/*package com.example.bookshelf.config;
 
 import com.example.bookshelf.service.auth.JwtService;
 import jakarta.servlet.FilterChain;
@@ -65,4 +65,4 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         filterChain.doFilter(request, response);
     }
-}
+}*/
