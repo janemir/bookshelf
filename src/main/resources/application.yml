@@ -1,5 +1,7 @@
 spring:
   datasource:
+    autoconfigure:
+      exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
     url: jdbc:postgresql://localhost:5433/bookshelf?currentSchema=public
     username: bookshelf_app
     password: password1029384756
