@@ -13,6 +13,17 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
         default_schema: public
+  mail:
+    host: smtp.mailtrap.io
+    port: 2525
+    username: YOUR_USERNAME
+    password: YOUR_PASSWORD
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 management:
   endpoints:
