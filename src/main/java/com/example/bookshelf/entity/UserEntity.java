@@ -34,6 +34,9 @@ public class UserEntity implements UserDetails {
     @Column(name = "is_verified", nullable = false)
     private boolean isVerified = false;
 
+    @Column(nullable = false)
+    private Boolean enabled = true;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_USER"));

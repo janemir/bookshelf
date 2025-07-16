@@ -48,6 +48,7 @@ public class AuthServiceImpl implements AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .verificationToken(verificationToken)
                 .isVerified(false)
+                .enabled(true)
                 .build();
 
         userRepository.save(user);
