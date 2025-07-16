@@ -1,31 +1,42 @@
+// src/main/java/com/example/bookshelf/config/SecurityConfig.java
 package com.example.bookshelf.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+    private final JwtAuthFilter jwtAuthFilter;
+    private final AuthenticationProvider authenticationProvider;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .csrf().disable()
                 .authorizeHttpRequests(auth -> auth
-                        // Открываем доступ к endpoint регистрации и подтверждения
-                        .requestMatchers("/api/v1/auth/register", "/api/v1/auth/verify").permitAll()
-                        // Доступ к Swagger UI и API-документации
-                        .requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
-                        // Все остальные запросы требуют аутентификации
+                        .requestMatchers(
+                                "/api/v1/auth/register",
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/verify",
+                                "/swagger-ui/**",
+                                "/api-docs/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
-                // Включаем базовую HTTP-аутентификацию для тестов
-                .httpBasic();
-
-        // Отключаем CSRF для упрощения (позже включим при необходимости)
-        http.csrf().disable();
+                .sessionManagement()
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .and()
+                .authenticationProvider(authenticationProvider)
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

@@ -14,16 +14,27 @@ spring:
         format_sql: true
         default_schema: public
   mail:
-    host: smtp.mailtrap.io
+    host: sandbox.smtp.mailtrap.io
     port: 2525
-    username: YOUR_USERNAME
-    password: YOUR_PASSWORD
+    username: 37d16ab913d0d1
+    password: 5caa15fbbfbd91
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
+  security:
+    user:
+      name: admin    # Удалите после реализации JWT (используется только для тестов)
+      password: admin123  # Удалите после реализации JWT
+
+jwt:
+  secret: your-256-bit-secret-key-must-be-at-least-32-characters-long  # Сгенерируйте надежный ключ
+  expiration: 86400000  # 24 часа в миллисекундах
+
+app:
+  verification-url: http://localhost:8081/api/v1/auth/verify?token=  # Обратите внимание на порт 8081
 
 management:
   endpoints:
@@ -39,6 +50,7 @@ logging:
     org.hibernate.SQL: DEBUG
     org.hibernate.type: TRACE
     org.springframework.security: INFO
+    com.example.bookshelf: DEBUG
 
 server:
   port: 8081
