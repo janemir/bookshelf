@@ -30,7 +30,7 @@ spring:
       password: admin123  # Удалите после реализации JWT
 
 jwt:
-  secret: bXktdmVyeS1zZWNyZXQta2V5  # Сгенерируйте надежный ключ
+  secret: bXktc3VwZXItbG9uZy1yYW5kb20tc2VjcmV0LWtleS0xMjM0NTY=  # Сгенерируйте надежный ключ
   expiration: 86400000  # 24 часа в миллисекундах
 
 app:
