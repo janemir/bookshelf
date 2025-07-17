@@ -1,4 +1,3 @@
-// src/main/java/com/example/bookshelf/service/impl/AuthServiceImpl.java
 package com.example.bookshelf.service;
 
 import com.example.bookshelf.dto.AuthResponse;
@@ -17,8 +16,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.UUID;
+import com.example.bookshelf.service.CaptchaService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
 @RequiredArgsConstructor
@@ -28,10 +28,16 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
+    private final CaptchaService captchaService;
 
     @Override
     @Transactional
     public void register(RegisterRequest request) {
+
+        if (!captchaService.verifyCaptcha(request.getRecaptchaResponse())) {
+            throw new RuntimeException("Invalid captcha");
+        }
+
         if (userRepository.findByUsername(request.getUsername()).isPresent()) {
             throw new UserAlreadyExistsException("Username already exists");
         }

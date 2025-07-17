@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>reCAPTCHA Test</title>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+</head>
+<body>
+<h2>Генерация токена reCAPTCHA для Swagger</h2>
+<form id="form">
+    <div class="g-recaptcha" data-sitekey="6LewSoYrAAAAADatIyLzXtDZ-ot2WPMUlzN3sTt5"></div>
+    <br/>
+    <button type="submit">Получить токен</button>
+</form>
+<p>Скопируй этот токен и вставь в поле <b>recaptchaResponse</b> в Swagger:</p>
+<textarea id="token" rows="5" cols="80" readonly></textarea>
+<script>
+    document.getElementById('form').onsubmit = function(e) {
+      e.preventDefault();
+      var response = grecaptcha.getResponse();
+      if (!response) {
+        alert("Сначала отметь 'Я не робот'!");
+        return;
+      }
+      document.getElementById('token').value = response;
+    }
+</script>
+</body>
+</html>
