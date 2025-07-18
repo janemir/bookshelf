@@ -24,6 +24,12 @@ spring:
           auth: true
           starttls:
             enable: true
+
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
   security:
     user:
       name: admin    # Удалите после реализации JWT (используется только для тестов)
@@ -66,3 +72,5 @@ springdoc:
 recaptcha:
   secret: 6LewSoYrAAAAAO_AlnCgcHIPWB3PDRvNuCVAhtmB
   site: 6LewSoYrAAAAADatIyLzXtDZ-ot2WPMUlzN3sTt5
+
+

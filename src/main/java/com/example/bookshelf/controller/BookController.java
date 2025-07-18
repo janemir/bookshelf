@@ -7,8 +7,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.util.List;
 
 @Tag(name = "Main methods")
@@ -18,6 +22,29 @@ import java.util.List;
 public class BookController {
 
     private final BookService bookService;
+
+    @PostMapping(
+            value = "/upload",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<String> uploadBook(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body("Файл пустой");
+        }
+        try {
+            String uploadDir = System.getProperty("user.dir") + File.separator + "books";
+            File dir = new File(uploadDir);
+            if (!dir.exists()) dir.mkdirs();
+
+            String filePath = uploadDir + File.separator + file.getOriginalFilename();
+            file.transferTo(new File(filePath));
+
+            // Здесь можно вернуть ID книги или имя файла
+            return ResponseEntity.ok("Файл успешно загружен: " + file.getOriginalFilename());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ошибка загрузки: " + e.getMessage());
+        }
+    }
 
     @Operation(
             summary = "Создает новую книгу",
