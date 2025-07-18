@@ -4,6 +4,7 @@ import com.example.bookshelf.dto.BookRequest;
 import com.example.bookshelf.dto.BookResponse;
 import com.example.bookshelf.service.BookConversionService;
 import com.example.bookshelf.service.BookService;
+import com.example.bookshelf.service.BookProgressService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +15,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Tag(name = "Main methods")
 @RestController
@@ -24,6 +27,7 @@ public class BookController {
 
     private final BookService bookService;
     private final BookConversionService bookConversionService;
+    private final BookProgressService bookProgressService;
 
     @PostMapping(
             value = "/upload",
@@ -97,5 +101,30 @@ public class BookController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteBook(@PathVariable Long id) {
         bookService.deleteBook(id);
+    }
+
+    @GetMapping("/{id}/read")
+    public ResponseEntity<?> readBook(
+            @PathVariable Long id,
+            @RequestParam Long userId,
+            @RequestParam(required = false) Integer page
+    ) {
+
+        String uploadDir = System.getProperty("user.dir") + File.separator + "books";
+        String htmlPath = uploadDir + File.separator + id + ".html";
+
+        int currentPage = (page != null) ? page : bookProgressService.getProgress(userId, id);
+
+        if (page != null) {
+            bookProgressService.saveOrUpdateProgress(userId, id, page);
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("bookId", id);
+        response.put("userId", userId);
+        response.put("currentPage", currentPage);
+        response.put("htmlPath", htmlPath);
+
+        return ResponseEntity.ok(response);
     }
 }

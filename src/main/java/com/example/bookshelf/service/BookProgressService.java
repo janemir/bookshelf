@@ -28,6 +28,6 @@ public class BookProgressService {
     public Integer getProgress(Long userId, Long bookId) {
         return bookProgressRepository.findByUserIdAndBookId(userId, bookId)
                 .map(BookProgress::getPageNumber)
-                .orElse(1);
+                .orElse(1); // по умолчанию первая страница
     }
 }
