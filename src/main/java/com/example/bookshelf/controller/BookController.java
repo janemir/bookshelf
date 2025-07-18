@@ -2,6 +2,7 @@ package com.example.bookshelf.controller;
 
 import com.example.bookshelf.dto.BookRequest;
 import com.example.bookshelf.dto.BookResponse;
+import com.example.bookshelf.service.BookConversionService;
 import com.example.bookshelf.service.BookService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,6 +23,7 @@ import java.util.List;
 public class BookController {
 
     private final BookService bookService;
+    private final BookConversionService bookConversionService;
 
     @PostMapping(
             value = "/upload",
@@ -39,7 +41,8 @@ public class BookController {
             String filePath = uploadDir + File.separator + file.getOriginalFilename();
             file.transferTo(new File(filePath));
 
-            // Здесь можно вернуть ID книги или имя файла
+            bookConversionService.convertBookToHtml(filePath);
+
             return ResponseEntity.ok("Файл успешно загружен: " + file.getOriginalFilename());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ошибка загрузки: " + e.getMessage());
