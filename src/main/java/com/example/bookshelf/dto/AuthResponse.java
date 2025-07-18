@@ -1,4 +1,3 @@
-// src/main/java/com/example/bookshelf/dto/AuthResponse.java
 package com.example.bookshelf.dto;
 
 import lombok.Builder;

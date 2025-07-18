@@ -1,4 +1,3 @@
-// src/main/java/com/example/bookshelf/config/SecurityConfig.java
 package com.example.bookshelf.config;
 
 import lombok.RequiredArgsConstructor;

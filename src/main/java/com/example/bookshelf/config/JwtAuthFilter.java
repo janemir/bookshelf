@@ -1,4 +1,3 @@
-// src/main/java/com/example/bookshelf/config/JwtAuthFilter.java
 package com.example.bookshelf.config;
 
 import com.example.bookshelf.service.JwtService;

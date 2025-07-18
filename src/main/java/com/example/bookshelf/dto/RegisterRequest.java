@@ -1,4 +1,3 @@
-// src/main/java/com/example/bookshelf/dto/RegisterRequest.java
 package com.example.bookshelf.dto;
 
 import lombok.Data;

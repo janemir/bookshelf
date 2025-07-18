@@ -1,4 +1,3 @@
-// src/main/java/com/example/bookshelf/repository/UserRepository.java
 package com.example.bookshelf.repository;
 
 import com.example.bookshelf.entity.UserEntity;

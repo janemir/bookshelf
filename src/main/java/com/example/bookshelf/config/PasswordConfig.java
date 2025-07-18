@@ -1,4 +1,3 @@
-// src/main/java/com/example/bookshelf/config/PasswordConfig.java
 package com.example.bookshelf.config;
 
 import org.springframework.context.annotation.Bean;

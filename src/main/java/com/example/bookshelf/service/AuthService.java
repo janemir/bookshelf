@@ -1,4 +1,3 @@
-// src/main/java/com/example/bookshelf/service/AuthService.java
 package com.example.bookshelf.service;
 
 import com.example.bookshelf.dto.AuthResponse;

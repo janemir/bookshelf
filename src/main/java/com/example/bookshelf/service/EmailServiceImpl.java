@@ -1,4 +1,3 @@
-// src/main/java/com/example/bookshelf/service/impl/EmailServiceImpl.java
 package com.example.bookshelf.service;
 
 import com.example.bookshelf.service.EmailService;
