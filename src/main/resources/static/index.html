@@ -1,1 +1,385 @@
-<h1>Bookshelf</h1>
+<!--<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Книжная полка — клиент</title>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+</head>
+<body>
+<h2>Книжная полка — демо клиент</h2>
+
+<div id="auth">
+    <h3>Регистрация</h3>
+    <form id="registerForm">
+        <input type="text" id="regUsername" placeholder="Логин" required><br>
+        <input type="email" id="regEmail" placeholder="Email" required><br>
+        <input type="password" id="regPassword" placeholder="Пароль" required><br>
+        <div class="g-recaptcha" data-sitekey="6LewSoYrAAAAADatIyLzXtDZ-ot2WPMUlzN3sTt5"></div>
+        <button type="submit">Зарегистрироваться</button>
+    </form>
+    <div id="regResult"></div>
+    <h3>Вход</h3>
+    <form id="loginForm">
+        <input type="text" id="loginUsername" placeholder="Логин" required><br>
+        <input type="password" id="loginPassword" placeholder="Пароль" required><br>
+        <button type="submit">Войти</button>
+    </form>
+    <div id="loginResult"></div>
+</div>
+
+<div id="main" style="display:none">
+    <h3>Добро пожаловать, <span id="currentUser"></span>!</h3>
+    <button onclick="logout()">Выйти</button>
+    <h4>Профиль</h4>
+    <button onclick="showProfile()">Мой профиль</button>
+    <div id="profile"></div>
+    <h4>Загрузка книги</h4>
+    <form id="uploadForm">
+        <input type="text" id="bookTitle" placeholder="Название" required>
+        <input type="text" id="bookAuthor" placeholder="Автор" required>
+        <input type="text" id="bookDescription" placeholder="Описание" required>
+        <input type="file" id="bookFile" required>
+        <button type="submit">Загрузить книгу</button>
+    </form>
+    <div id="uploadResult"></div>
+    <h4>Мои книги</h4>
+    <button onclick="getBooks()">Показать книги</button>
+    <ul id="bookList"></ul>
+    <h4>Мои полки</h4>
+    <button onclick="getShelves()">Показать полки</button>
+    <form id="shelfForm">
+        <input type="text" id="shelfName" placeholder="Название полки" required>
+        <button type="submit">Создать полку</button>
+    </form>
+    <ul id="shelfList"></ul>
+    <h4>Чтение книги</h4>
+    <div id="reader" style="display:none">
+        <div><b id="bookTitleRead"></b> (страница <span id="pageNum"></span>)</div>
+        <div id="bookContent" style="border:1px solid #ccc; padding:10px; margin:10px 0"></div>
+        <button onclick="prevPage()">&lt; Назад</button>
+        <button onclick="nextPage()">Вперёд &gt;</button>
+        <button onclick="addBookmark()">Добавить закладку</button>
+        <h5>Мои закладки</h5>
+        <ul id="bookmarkList"></ul>
+    </div>
+    <h4>Публичный профиль пользователя</h4>
+    <form id="publicProfileForm">
+        <input type="number" id="publicUserId" placeholder="ID пользователя" required>
+        <button type="submit">Показать профиль</button>
+    </form>
+    <div id="publicProfile"></div>
+    <h4>Запросы доступа к книгам</h4>
+    <button onclick="getAccessRequests()">Показать мои запросы</button>
+    <div id="accessRequests"></div>
+</div>
+
+<script>
+let jwt = null;
+let userId = null;
+let currentBookId = null;
+let currentPage = 1;
+let currentBookTitle = '';
+
+// Регистрация
+registerForm.onsubmit = async e => {
+    e.preventDefault();
+    const recaptchaResponse = grecaptcha.getResponse();
+    if (!recaptchaResponse) {
+        alert('Подтвердите, что вы не робот!');
+        return;
+    }
+    const body = {
+        username: regUsername.value,
+        email: regEmail.value,
+        password: regPassword.value,
+        recaptchaResponse
+    };
+    const res = await fetch('/api/v1/auth/register', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+    });
+    regResult.innerText = res.ok ? 'Проверьте почту для подтверждения!' : 'Ошибка регистрации';
+};
+
+// Вход
+loginForm.onsubmit = async e => {
+    e.preventDefault();
+    const body = {
+        username: loginUsername.value,
+        password: loginPassword.value
+    };
+    const res = await fetch('/api/v1/auth/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+    });
+    if (res.ok) {
+        const data = await res.json();
+        jwt = data.token;
+        userId = data.id;
+        currentUser.innerText = body.username;
+        auth.style.display = 'none';
+        main.style.display = '';
+    } else {
+        loginResult.innerText = 'Ошибка входа';
+    }
+};
+
+function logout() {
+    jwt = null;
+    userId = null;
+    auth.style.display = '';
+    main.style.display = 'none';
+}
+
+// Загрузка книги
+uploadForm.onsubmit = async e => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append('file', bookFile.files[0]);
+    formData.append('title', bookTitle.value);
+    formData.append('author', bookAuthor.value);
+    formData.append('description', bookDescription.value);
+    formData.append('userId', userId);
+    const res = await fetch('/api/v1/books/upload?userId=' + userId, {
+        method: 'POST',
+        headers: {Authorization: 'Bearer ' + jwt},
+        body: formData
+    });
+    uploadResult.innerText = res.ok ? 'Книга загружена!' : 'Ошибка загрузки книги';
+};
+
+// Получить книги
+async function getBooks() {
+    bookList.innerHTML = '';
+    const res = await fetch('/api/v1/books/user/' + userId, {
+        headers: {Authorization: 'Bearer ' + jwt}
+    });
+    if (!res.ok) {
+        bookList.innerHTML = '<li>Ошибка загрузки книг</li>';
+        return;
+    }
+    const books = await res.json();
+    books.forEach(book => {
+        const li = document.createElement('li');
+        li.innerHTML = `<b>${book.title}</b> <button onclick="readBook(${book.id},1,'${book.title.replace(/'/g, '')}')">Читать</button> <button onclick="requestAccess(${book.id})">Запросить доступ</button>`;
+        bookList.appendChild(li);
+    });
+}
+
+// Читать книгу
+async function readBook(bookId, page, title) {
+    currentBookId = bookId;
+    currentPage = page;
+    currentBookTitle = title;
+    bookTitleRead.innerText = title;
+    const res = await fetch(`/api/v1/books/${bookId}/read?userId=${userId}&page=${page}`, {
+        headers: {Authorization: 'Bearer ' + jwt}
+    });
+    if (!res.ok) {
+        bookContent.innerText = 'Ошибка чтения книги';
+        return;
+    }
+    const data = await res.json();
+    pageNum.innerText = data.currentPage;
+    bookContent.innerHTML = data.content;
+    reader.style.display = '';
+    loadBookmarks();
+}
+
+function prevPage() {
+    if (currentPage > 1) readBook(currentBookId, --currentPage, currentBookTitle);
+}
+function nextPage() {
+    readBook(currentBookId, ++currentPage, currentBookTitle);
+}
+
+// Добавить закладку
+async function addBookmark() {
+    const res = await fetch('/api/v1/bookmarks/add?userId=' + userId + '&bookId=' + currentBookId + '&pageNumber=' + currentPage, {
+        method: 'POST',
+        headers: {Authorization: 'Bearer ' + jwt}
+    });
+    if (res.ok) {
+        alert('Закладка добавлена!');
+        loadBookmarks();
+    } else {
+        alert('Ошибка добавления закладки');
+    }
+}
+
+// Загрузить закладки
+async function loadBookmarks() {
+    bookmarkList.innerHTML = '';
+    const res = await fetch(`/api/v1/bookmarks/by-book?userId=${userId}&bookId=${currentBookId}`, {
+        headers: {Authorization: 'Bearer ' + jwt}
+    });
+    if (!res.ok) return;
+    const bookmarks = await res.json();
+    bookmarks.forEach(b => {
+        const li = document.createElement('li');
+        li.innerHTML = `Стр. ${b.pageNumber} <button onclick="gotoBookmark(${b.id})">Перейти</button>`;
+        bookmarkList.appendChild(li);
+    });
+}
+
+// Перейти по закладке
+async function gotoBookmark(bookmarkId) {
+    const res = await fetch(`/api/v1/bookmarks/goto/${bookmarkId}?userId=${userId}`, {
+        headers: {Authorization: 'Bearer ' + jwt}
+    });
+    if (!res.ok) {
+        alert('Ошибка перехода по закладке');
+        return;
+    }
+    const data = await res.json();
+    readBook(data.bookId, data.pageNumber, currentBookTitle);
+}
+
+// Получить полки
+async function getShelves() {
+    shelfList.innerHTML = '';
+    const res = await fetch(`/api/v1/shelves/user/${userId}`, {
+        headers: {Authorization: 'Bearer ' + jwt}
+    });
+    if (!res.ok) {
+        shelfList.innerHTML = '<li>Ошибка загрузки полок</li>';
+        return;
+    }
+    const shelves = await res.json();
+    shelves.forEach(shelf => {
+        const li = document.createElement('li');
+        li.innerHTML = `<b>${shelf.name}</b> <button onclick="deleteShelf(${shelf.id})">Удалить</button>`;
+        shelfList.appendChild(li);
+    });
+}
+
+// Создать полку
+shelfForm.onsubmit = async e => {
+    e.preventDefault();
+    const res = await fetch('/api/v1/shelves', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + jwt
+        },
+        body: JSON.stringify({userId, name: shelfName.value})
+    });
+    if (res.ok) {
+        getShelves();
+        shelfName.value = '';
+    } else {
+        alert('Ошибка создания полки');
+    }
+};
+
+// Удалить полку
+async function deleteShelf(shelfId) {
+    const res = await fetch(`/api/v1/shelves/${shelfId}`, {
+        method: 'DELETE',
+        headers: {Authorization: 'Bearer ' + jwt}
+    });
+    if (res.ok) getShelves();
+    else alert('Ошибка удаления полки');
+}
+
+// Запросить доступ к книге
+async function requestAccess(bookId) {
+    const comment = prompt('Комментарий к запросу (необязательно):');
+    const res = await fetch('/api/v1/access/request', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + jwt
+        },
+        body: JSON.stringify({fromUserId: userId, bookId, comment})
+    });
+    if (res.ok) alert('Запрос отправлен!');
+    else alert('Ошибка запроса доступа');
+}
+
+// Получить запросы доступа
+async function getAccessRequests() {
+    accessRequests.innerHTML = '';
+    const incoming = await fetch('/api/v1/access/incoming?userId=' + userId, {headers: {Authorization: 'Bearer ' + jwt}});
+    const outgoing = await fetch('/api/v1/access/outgoing?userId=' + userId, {headers: {Authorization: 'Bearer ' + jwt}});
+    let html = '<b>Входящие:</b><ul>';
+    if (incoming.ok) {
+        const arr = await incoming.json();
+        arr.forEach(r => {
+            html += `<li>Книга ${r.bookId} от ${r.fromUserId} [${r.status}] <button onclick="approveAccess(${r.id})">Одобрить</button> <button onclick="rejectAccess(${r.id})">Отклонить</button></li>`;
+        });
+    }
+    html += '</ul><b>Исходящие:</b><ul>';
+    if (outgoing.ok) {
+        const arr = await outgoing.json();
+        arr.forEach(r => {
+            html += `<li>Книга ${r.bookId} к ${r.toUserId} [${r.status}]</li>`;
+        });
+    }
+    html += '</ul>';
+    accessRequests.innerHTML = html;
+}
+
+// Одобрить запрос
+async function approveAccess(requestId) {
+    const res = await fetch('/api/v1/access/approve', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt},
+        body: JSON.stringify({requestId})
+    });
+    if (res.ok) getAccessRequests();
+    else alert('Ошибка одобрения');
+}
+// Отклонить запрос
+async function rejectAccess(requestId) {
+    const res = await fetch('/api/v1/access/reject', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt},
+        body: JSON.stringify({requestId, reason: 'Отклонено через клиент'})
+    });
+    if (res.ok) getAccessRequests();
+    else alert('Ошибка отклонения');
+}
+
+// Показать публичный профиль
+publicProfileForm.onsubmit = async e => {
+    e.preventDefault();
+    const id = publicUserId.value;
+    const res = await fetch(`/api/v1/users/${id}/public-profile`, {
+        headers: {Authorization: 'Bearer ' + jwt}
+    });
+    if (!res.ok) {
+        publicProfile.innerText = 'Пользователь не найден';
+        return;
+    }
+    const data = await res.json();
+    let html = `<b>${data.username}</b> (id: ${data.userId})<br>Полки:<ul>`;
+    data.shelves.forEach(s => html += `<li>${s.name}</li>`);
+    html += '</ul>Книги:<ul>';
+    data.books.forEach(b => html += `<li>${b.title}</li>`);
+    html += '</ul>';
+    publicProfile.innerHTML = html;
+};
+
+// Показать свой профиль
+async function showProfile() {
+    const res = await fetch(`/api/v1/users/${userId}/public-profile`, {
+        headers: {Authorization: 'Bearer ' + jwt}
+    });
+    if (!res.ok) {
+        profile.innerText = 'Ошибка профиля';
+        return;
+    }
+    const data = await res.json();
+    let html = `<b>${data.username}</b> (id: ${data.userId})<br>Полки:<ul>`;
+    data.shelves.forEach(s => html += `<li>${s.name}</li>`);
+    html += '</ul>Книги:<ul>';
+    data.books.forEach(b => html += `<li>${b.title}</li>`);
+    html += '</ul>';
+    profile.innerHTML = html;
+}
+</script>
+</body>
+</html>-->

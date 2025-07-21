@@ -38,7 +38,7 @@ public class UserEntity implements UserDetails {
     @Column(nullable = false)
     private Boolean enabled = true;
 
-    @Column(name = "verification_token_created_at", nullable = false)
+    @Column(name = "verification_token_created_at", nullable = true)
     private LocalDateTime verificationTokenCreatedAt;
 
     @Override
