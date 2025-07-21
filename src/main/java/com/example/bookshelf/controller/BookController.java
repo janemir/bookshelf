@@ -2,9 +2,12 @@ package com.example.bookshelf.controller;
 
 import com.example.bookshelf.dto.BookRequest;
 import com.example.bookshelf.dto.BookResponse;
+import com.example.bookshelf.dto.BookUploadRequest;
 import com.example.bookshelf.service.BookConversionService;
 import com.example.bookshelf.service.BookProgressService;
 import com.example.bookshelf.service.BookService;
+import com.example.bookshelf.entity.BookPage;
+import com.example.bookshelf.repository.BookPageRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -32,21 +35,22 @@ public class BookController {
     private final BookService bookService;
     private final BookConversionService bookConversionService;
     private final BookProgressService bookProgressService;
+    private final BookPageRepository bookPageRepository;
 
     @Operation(
-            summary = "Загрузить книгу",
-            description = "Загружает файл книги и сохраняет его в директорию /books. Укажите файл через параметр `file`. Файл конвертируется в HTML. Возвращает имя загруженного файла.",
+            summary = "Загрузить книгу (только файл)",
+            description = "Загружает файл книги и сохраняет его в директорию /books. Возвращает bookId для последующего обновления метаданных.",
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Файл успешно загружен",
-                            content = @Content(schema = @Schema(implementation = String.class))),
+                    @ApiResponse(responseCode = "200", description = "Файл успешно загружен и создана книга (bookId)",
+                            content = @Content(schema = @Schema(implementation = Long.class))),
                     @ApiResponse(responseCode = "400", description = "Файл пустой"),
                     @ApiResponse(responseCode = "500", description = "Ошибка при загрузке или конвертации")
             }
     )
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> uploadBook(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Long> uploadBook(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
-            return ResponseEntity.badRequest().body("Файл пустой");
+            return ResponseEntity.badRequest().body(null);
         }
         try {
             String uploadDir = System.getProperty("user.dir") + File.separator + "books";
@@ -56,11 +60,17 @@ public class BookController {
             String filePath = uploadDir + File.separator + file.getOriginalFilename();
             file.transferTo(new File(filePath));
 
-            bookConversionService.convertBookToHtml(filePath);
+            // Создаём BookEntity для этой книги (только с названием)
+            BookRequest bookRequest = new BookRequest();
+            bookRequest.setTitle(file.getOriginalFilename());
+            BookResponse bookResponse = bookService.createBook(bookRequest);
 
-            return ResponseEntity.ok("Файл успешно загружен: " + file.getOriginalFilename());
+            // Асинхронно конвертируем книгу в страницы, передаём bookId
+            bookConversionService.convertBookToHtml(filePath, bookResponse.getId());
+
+            return ResponseEntity.ok(bookResponse.getId());
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ошибка загрузки: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 
@@ -133,7 +143,7 @@ public class BookController {
 
     @Operation(
             summary = "Читать книгу",
-            description = "Возвращает данные для чтения книги по её `id` для указанного `userId`. Укажите `page` (номер страницы, опционально) для перехода к конкретной странице. Сохраняет прогресс чтения. Возвращает объект с `bookId`, `userId`, `currentPage` и `htmlPath`.",
+            description = "Возвращает данные для чтения книги по её `id` для указанного `userId`. Укажите `page` (номер страницы, опционально) для перехода к конкретной странице. Сохраняет прогресс чтения. Возвращает объект с `bookId`, `userId`, `currentPage`, `totalPages`, `content`.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Данные для чтения успешно получены"),
                     @ApiResponse(responseCode = "404", description = "Книга не найдена")
@@ -143,23 +153,30 @@ public class BookController {
     public ResponseEntity<Map<String, Object>> readBook(
             @PathVariable Long id,
             @RequestParam Long userId,
-            @RequestParam(required = false) Integer page) {
-
-        String uploadDir = System.getProperty("user.dir") + File.separator + "books";
-        String htmlPath = uploadDir + File.separator + id + ".html";
-
-        int currentPage = (page != null) ? page : bookProgressService.getProgress(userId, id);
-
-        if (page != null) {
-            bookProgressService.saveOrUpdateProgress(userId, id, page);
+            @RequestParam(required = false) Integer page
+    ) {
+        // Проверяем, что книга сконвертирована
+        int totalPages = bookPageRepository.countByBookId(id);
+        if (totalPages == 0) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Книга не найдена или не сконвертирована"));
         }
-
+        int currentPage = (page != null && page > 0 && page <= totalPages)
+                ? page
+                : bookProgressService.getProgress(userId, id);
+        if (currentPage > totalPages) currentPage = totalPages;
+        // Сохраняем прогресс
+        bookProgressService.saveOrUpdateProgress(userId, id, currentPage);
+        // Получаем страницу
+        BookPage bookPage = bookPageRepository.findByBookIdAndPageNumber(id, currentPage).orElse(null);
+        if (bookPage == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Страница не найдена"));
+        }
         Map<String, Object> response = new HashMap<>();
         response.put("bookId", id);
         response.put("userId", userId);
         response.put("currentPage", currentPage);
-        response.put("htmlPath", htmlPath);
-
+        response.put("totalPages", totalPages);
+        response.put("content", bookPage.getContent());
         return ResponseEntity.ok(response);
     }
 }

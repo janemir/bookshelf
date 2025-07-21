@@ -17,6 +17,6 @@ public class BookPage {
     private Long bookId;
     private Integer pageNumber;
 
-    @Lob
+    @Column(columnDefinition = "text")
     private String content;
 } 
