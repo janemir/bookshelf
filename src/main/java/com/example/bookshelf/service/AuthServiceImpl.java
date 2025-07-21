@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
 import com.example.bookshelf.service.CaptchaService;
 import org.springframework.beans.factory.annotation.Autowired;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -55,6 +56,7 @@ public class AuthServiceImpl implements AuthService {
                 .verificationToken(verificationToken)
                 .isVerified(false)
                 .enabled(true)
+                .verificationTokenCreatedAt(LocalDateTime.now()) // сохраняем дату создания токена
                 .build();
 
         userRepository.save(user);
@@ -88,10 +90,15 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public void verifyEmail(String token) {
         UserEntity user = userRepository.findByVerificationToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid verification token"));
-
+                .orElseThrow(() -> new RuntimeException("Некорректный токен подтверждения"));
+        // Проверка срока действия токена (24 часа)
+        if (user.getVerificationTokenCreatedAt() == null ||
+            user.getVerificationTokenCreatedAt().plusHours(24).isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Срок действия ссылки истёк. Запросите новую ссылку на подтверждение.");
+        }
         user.setVerified(true);
         user.setVerificationToken(null);
+        user.setVerificationTokenCreatedAt(null);
         userRepository.save(user);
     }
 }

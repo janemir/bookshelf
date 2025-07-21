@@ -4,19 +4,19 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "books")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-
-public class BookEntity {
+@Table(name = "book_page")
+public class BookPage {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String title;
-    private String author;
-    private String description;
-    private Boolean converted = false;
-}
+    private Long bookId;
+    private Integer pageNumber;
+
+    @Lob
+    private String content;
+} 

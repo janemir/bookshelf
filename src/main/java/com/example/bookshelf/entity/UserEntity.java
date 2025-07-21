@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.util.Collection;
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -36,6 +37,9 @@ public class UserEntity implements UserDetails {
 
     @Column(nullable = false)
     private Boolean enabled = true;
+
+    @Column(name = "verification_token_created_at", nullable = false)
+    private LocalDateTime verificationTokenCreatedAt;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

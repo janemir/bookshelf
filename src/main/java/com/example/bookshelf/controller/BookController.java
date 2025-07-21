@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 @Tag(name = "Книги",
-        description = "Управление книгами: загрузка, создание, обновление, удаление и чтение")
+        description = "Управление книгами: загрузка, создание, обновление, удаление и чтение.")
 @RestController
 @RequestMapping("/api/v1/books")
 @RequiredArgsConstructor
