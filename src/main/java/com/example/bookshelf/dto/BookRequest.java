@@ -11,4 +11,5 @@ public class BookRequest {
     private String title;
     private String author;
     private String description;
+    private Long userId;
 }

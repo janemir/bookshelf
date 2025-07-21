@@ -19,4 +19,5 @@ public class BookEntity {
     private String author;
     private String description;
     private Boolean converted = false;
+    private Long userId;
 }

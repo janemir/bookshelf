@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface ShelfRepository extends JpaRepository<Shelf, Long> {
     List<Shelf> findByUserId(Long userId);
+    List<Shelf> findByBooks_Id(Long bookId);
 } 

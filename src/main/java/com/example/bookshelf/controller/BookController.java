@@ -6,8 +6,18 @@ import com.example.bookshelf.dto.BookUploadRequest;
 import com.example.bookshelf.service.BookConversionService;
 import com.example.bookshelf.service.BookProgressService;
 import com.example.bookshelf.service.BookService;
+import com.example.bookshelf.service.BookAccessRequestService;
 import com.example.bookshelf.entity.BookPage;
+import com.example.bookshelf.entity.BookEntity;
 import com.example.bookshelf.repository.BookPageRepository;
+import com.example.bookshelf.repository.BookRepository;
+import com.example.bookshelf.dto.BookDetailsResponse;
+import com.example.bookshelf.entity.Shelf;
+import com.example.bookshelf.repository.ShelfRepository;
+import com.example.bookshelf.entity.BookAccessRequest;
+import com.example.bookshelf.repository.BookAccessRequestRepository;
+import com.example.bookshelf.entity.UserEntity;
+import com.example.bookshelf.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -24,6 +34,8 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.stream.Collectors;
 
 @Tag(name = "Книги",
         description = "Управление книгами: загрузка, создание, обновление, удаление и чтение.")
@@ -36,6 +48,11 @@ public class BookController {
     private final BookConversionService bookConversionService;
     private final BookProgressService bookProgressService;
     private final BookPageRepository bookPageRepository;
+    private final BookAccessRequestService bookAccessRequestService;
+    private final BookRepository bookRepository;
+    private final ShelfRepository shelfRepository;
+    private final BookAccessRequestRepository accessRequestRepository;
+    private final UserRepository userRepository;
 
     @Operation(
             summary = "Загрузить книгу (только файл)",
@@ -48,7 +65,7 @@ public class BookController {
             }
     )
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Long> uploadBook(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Long> uploadBook(@RequestParam("file") MultipartFile file, @RequestParam Long userId) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(null);
         }
@@ -60,9 +77,10 @@ public class BookController {
             String filePath = uploadDir + File.separator + file.getOriginalFilename();
             file.transferTo(new File(filePath));
 
-            // Создаём BookEntity для этой книги (только с названием)
+            // Создаём BookEntity для этой книги (только с названием и владельцем)
             BookRequest bookRequest = new BookRequest();
             bookRequest.setTitle(file.getOriginalFilename());
+            bookRequest.setUserId(userId);
             BookResponse bookResponse = bookService.createBook(bookRequest);
 
             // Асинхронно конвертируем книгу в страницы, передаём bookId
@@ -155,7 +173,15 @@ public class BookController {
             @RequestParam Long userId,
             @RequestParam(required = false) Integer page
     ) {
-        // Проверяем, что книга сконвертирована
+        // Проверяем, что книга сконвертирована и получаем владельца
+        BookEntity book = bookRepository.findById(id).orElse(null);
+        if (book == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Книга не найдена"));
+        }
+        if (!userId.equals(book.getUserId()) && !bookAccessRequestService.hasActiveAccess(userId, id)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", "У вас нет доступа к этой книге. Запросите доступ у владельца."));
+        }
         int totalPages = bookPageRepository.countByBookId(id);
         if (totalPages == 0) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Книга не найдена или не сконвертирована"));
@@ -178,5 +204,46 @@ public class BookController {
         response.put("totalPages", totalPages);
         response.put("content", bookPage.getContent());
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+        summary = "Получить подробную информацию о книге",
+        description = "Возвращает подробную информацию о книге: владелец, пользователи с доступом, полки."
+    )
+    @GetMapping("/{id}/details")
+    public ResponseEntity<BookDetailsResponse> getBookDetails(@PathVariable Long id) {
+        BookEntity book = bookRepository.findById(id).orElse(null);
+        if (book == null) {
+            return ResponseEntity.notFound().build();
+        }
+        // Владелец
+        UserEntity owner = userRepository.findById(book.getUserId()).orElse(null);
+        BookDetailsResponse.OwnerInfo ownerInfo = owner == null ? null :
+            new BookDetailsResponse.OwnerInfo(owner.getId(), owner.getUsername(), owner.getEmail());
+        // Пользователи с доступом
+        List<BookAccessRequest> accessRequests = accessRequestRepository.findByBookIdAndStatus(id, BookAccessRequest.Status.APPROVED);
+        List<BookDetailsResponse.UserInfo> accessUsers = accessRequests.stream()
+            .filter(req -> req.getExpiresAt() == null || req.getExpiresAt().isAfter(LocalDateTime.now()))
+            .map(req -> {
+                UserEntity u = userRepository.findById(req.getFromUserId()).orElse(null);
+                return u == null ? null : new BookDetailsResponse.UserInfo(u.getId(), u.getUsername(), u.getEmail());
+            })
+            .filter(u -> u != null)
+            .collect(Collectors.toList());
+        // Полки
+        List<Shelf> shelves = shelfRepository.findByBooks_Id(id);
+        List<BookDetailsResponse.ShelfInfo> shelfInfos = shelves.stream()
+            .map(shelf -> new BookDetailsResponse.ShelfInfo(shelf.getId(), shelf.getName()))
+            .collect(Collectors.toList());
+        // Собираем ответ
+        BookDetailsResponse resp = new BookDetailsResponse();
+        resp.setId(book.getId());
+        resp.setTitle(book.getTitle());
+        resp.setAuthor(book.getAuthor());
+        resp.setDescription(book.getDescription());
+        resp.setOwner(ownerInfo);
+        resp.setAccessUsers(accessUsers);
+        resp.setShelves(shelfInfos);
+        return ResponseEntity.ok(resp);
     }
 }
