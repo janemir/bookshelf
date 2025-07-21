@@ -19,7 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 public class ApplicationConfig {
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder; // Добавляем инжект PasswordEncoder
+    private final PasswordEncoder passwordEncoder;
 
     @Bean
     public UserDetailsService userDetailsService() {
@@ -31,7 +31,7 @@ public class ApplicationConfig {
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
         authProvider.setUserDetailsService(userDetailsService());
-        authProvider.setPasswordEncoder(passwordEncoder); // Используем инжектированный passwordEncoder
+        authProvider.setPasswordEncoder(passwordEncoder);
         return authProvider;
     }
 

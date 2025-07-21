@@ -56,7 +56,7 @@ public class AuthServiceImpl implements AuthService {
                 .verificationToken(verificationToken)
                 .isVerified(false)
                 .enabled(true)
-                .verificationTokenCreatedAt(LocalDateTime.now()) // сохраняем дату создания токена
+                .verificationTokenCreatedAt(LocalDateTime.now())
                 .build();
 
         userRepository.save(user);
@@ -91,7 +91,7 @@ public class AuthServiceImpl implements AuthService {
     public void verifyEmail(String token) {
         UserEntity user = userRepository.findByVerificationToken(token)
                 .orElseThrow(() -> new RuntimeException("Некорректный токен подтверждения"));
-        // Проверка срока действия токена (24 часа)
+
         if (user.getVerificationTokenCreatedAt() == null ||
             user.getVerificationTokenCreatedAt().plusHours(24).isBefore(LocalDateTime.now())) {
             throw new RuntimeException("Срок действия ссылки истёк. Запросите новую ссылку на подтверждение.");

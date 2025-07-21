@@ -15,17 +15,17 @@ public class BookAccessRequest {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long fromUserId; // кто запрашивает
-    private Long toUserId;   // владелец книги
+    private Long fromUserId;
+    private Long toUserId;
     private Long bookId;
 
-    private String comment;  // комментарий к запросу
+    private String comment;
 
     @Enumerated(EnumType.STRING)
     private Status status;
 
-    private LocalDateTime expiresAt; // до какого времени доступ
-    private String reason; // причина отказа/комментарий владельца
+    private LocalDateTime expiresAt;
+    private String reason;
 
     public enum Status {
         PENDING, APPROVED, REJECTED

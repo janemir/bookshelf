@@ -77,13 +77,11 @@ public class BookController {
             String filePath = uploadDir + File.separator + file.getOriginalFilename();
             file.transferTo(new File(filePath));
 
-            // Создаём BookEntity для этой книги (только с названием и владельцем)
             BookRequest bookRequest = new BookRequest();
             bookRequest.setTitle(file.getOriginalFilename());
             bookRequest.setUserId(userId);
             BookResponse bookResponse = bookService.createBook(bookRequest);
 
-            // Асинхронно конвертируем книгу в страницы, передаём bookId
             bookConversionService.convertBookToHtml(filePath, bookResponse.getId());
 
             return ResponseEntity.ok(bookResponse.getId());
@@ -173,7 +171,6 @@ public class BookController {
             @RequestParam Long userId,
             @RequestParam(required = false) Integer page
     ) {
-        // Проверяем, что книга сконвертирована и получаем владельца
         BookEntity book = bookRepository.findById(id).orElse(null);
         if (book == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Книга не найдена"));
@@ -190,9 +187,7 @@ public class BookController {
                 ? page
                 : bookProgressService.getProgress(userId, id);
         if (currentPage > totalPages) currentPage = totalPages;
-        // Сохраняем прогресс
         bookProgressService.saveOrUpdateProgress(userId, id, currentPage);
-        // Получаем страницу
         BookPage bookPage = bookPageRepository.findByBookIdAndPageNumber(id, currentPage).orElse(null);
         if (bookPage == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Страница не найдена"));
@@ -216,11 +211,11 @@ public class BookController {
         if (book == null) {
             return ResponseEntity.notFound().build();
         }
-        // Владелец
+
         UserEntity owner = userRepository.findById(book.getUserId()).orElse(null);
         BookDetailsResponse.OwnerInfo ownerInfo = owner == null ? null :
             new BookDetailsResponse.OwnerInfo(owner.getId(), owner.getUsername(), owner.getEmail());
-        // Пользователи с доступом
+
         List<BookAccessRequest> accessRequests = accessRequestRepository.findByBookIdAndStatus(id, BookAccessRequest.Status.APPROVED);
         List<BookDetailsResponse.UserInfo> accessUsers = accessRequests.stream()
             .filter(req -> req.getExpiresAt() == null || req.getExpiresAt().isAfter(LocalDateTime.now()))
@@ -230,12 +225,12 @@ public class BookController {
             })
             .filter(u -> u != null)
             .collect(Collectors.toList());
-        // Полки
+
         List<Shelf> shelves = shelfRepository.findByBooks_Id(id);
         List<BookDetailsResponse.ShelfInfo> shelfInfos = shelves.stream()
             .map(shelf -> new BookDetailsResponse.ShelfInfo(shelf.getId(), shelf.getName()))
             .collect(Collectors.toList());
-        // Собираем ответ
+
         BookDetailsResponse resp = new BookDetailsResponse();
         resp.setId(book.getId());
         resp.setTitle(book.getTitle());

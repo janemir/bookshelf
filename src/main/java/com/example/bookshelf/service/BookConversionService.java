@@ -25,7 +25,7 @@ public class BookConversionService {
                 sb.append(line).append("\n");
             }
             String text = sb.toString();
-            int pageSize = 2000; // символов на страницу
+            int pageSize = 2000;
             int totalPages = (int) Math.ceil((double) text.length() / pageSize);
             for (int i = 0; i < totalPages; i++) {
                 int start = i * pageSize;
@@ -39,7 +39,6 @@ public class BookConversionService {
                         .build();
                 bookPageRepository.save(page);
             }
-            // После успешной конвертации выставляем converted = true
             bookRepository.findById(bookId).ifPresent(book -> {
                 book.setConverted(true);
                 bookRepository.save(book);
