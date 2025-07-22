@@ -16,6 +16,10 @@ import com.example.bookshelf.service.BookAccessRequestService;
 import org.springframework.http.HttpStatus;
 import java.util.Map;
 import java.util.Optional;
+import com.example.bookshelf.dto.BookmarkWithUserResponse;
+import com.example.bookshelf.entity.UserEntity;
+import com.example.bookshelf.repository.UserRepository;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/bookmarks")
@@ -25,13 +29,15 @@ public class BookmarkController {
     private final BookPageRepository bookPageRepository;
     private final BookRepository bookRepository;
     private final BookAccessRequestService bookAccessRequestService;
+    private final UserRepository userRepository;
 
     @Autowired
-    public BookmarkController(BookmarkService bookmarkService, BookPageRepository bookPageRepository, BookRepository bookRepository, BookAccessRequestService bookAccessRequestService) {
+    public BookmarkController(BookmarkService bookmarkService, BookPageRepository bookPageRepository, BookRepository bookRepository, BookAccessRequestService bookAccessRequestService, UserRepository userRepository) {
         this.bookmarkService = bookmarkService;
         this.bookPageRepository = bookPageRepository;
         this.bookRepository = bookRepository;
         this.bookAccessRequestService = bookAccessRequestService;
+        this.userRepository = userRepository;
     }
 
     @Operation(summary = "Добавить закладку", description = "Добавляет закладку на страницу книги с заметкой.")
@@ -51,14 +57,7 @@ public class BookmarkController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Получить все закладки пользователя по книге", description = "Возвращает список всех закладок пользователя для выбранной книги.")
-    @GetMapping("/by-book")
-    public ResponseEntity<List<Bookmark>> getBookmarks(@RequestParam Long userId, @RequestParam Long bookId) {
-        List<Bookmark> bookmarks = bookmarkService.getBookmarks(userId, bookId);
-        return ResponseEntity.ok(bookmarks);
-    }
-
-    @Operation(summary = "Получить все закладки пользователя", description = "Возвращает список всех закладок пользователя по всем книгам.")
+    @Operation(summary = "Все закладки пользователя", description = "Возвращает список всех закладок пользователя по всем книгам.")
     @GetMapping("/by-user")
     public ResponseEntity<List<Bookmark>> getAllBookmarks(@RequestParam Long userId) {
         List<Bookmark> bookmarks = bookmarkService.getAllBookmarks(userId);
@@ -94,5 +93,23 @@ public class BookmarkController {
             "note", bookmark.getNote()
         );
         return ResponseEntity.ok(resp);
+    }
+
+    @Operation(summary = "Все закладки по книге", description = "Возвращает все закладки по книге с информацией о пользователе.")
+    @GetMapping("/by-book-all")
+    public ResponseEntity<List<BookmarkWithUserResponse>> getAllBookmarksByBook(@RequestParam Long bookId) {
+        List<Bookmark> bookmarks = bookmarkService.getAllBookmarksByBook(bookId);
+        List<BookmarkWithUserResponse> result = bookmarks.stream().map(b -> {
+            UserEntity user = userRepository.findById(b.getUserId()).orElse(null);
+            return new BookmarkWithUserResponse(
+                b.getId(),
+                b.getUserId(),
+                user != null ? user.getUsername() : null,
+                b.getNote(),
+                b.getPageNumber(),
+                b.getCreatedAt()
+            );
+        }).collect(Collectors.toList());
+        return ResponseEntity.ok(result);
     }
 } 

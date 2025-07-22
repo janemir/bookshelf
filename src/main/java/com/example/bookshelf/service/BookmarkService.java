@@ -52,4 +52,8 @@ public class BookmarkService {
     public List<Bookmark> getAllBookmarks(Long userId) {
         return bookmarkRepository.findByUserId(userId);
     }
+
+    public List<Bookmark> getAllBookmarksByBook(Long bookId) {
+        return bookmarkRepository.findByBookId(bookId);
+    }
 } 

@@ -55,53 +55,40 @@ public class BookController {
     private final UserRepository userRepository;
 
     @Operation(
-            summary = "Загрузить книгу (только файл)",
-            description = "Загружает файл книги и сохраняет его в директорию /books. Возвращает bookId для последующего обновления метаданных.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Файл успешно загружен и создана книга (bookId)",
-                            content = @Content(schema = @Schema(implementation = Long.class))),
-                    @ApiResponse(responseCode = "400", description = "Файл пустой"),
-                    @ApiResponse(responseCode = "500", description = "Ошибка при загрузке или конвертации")
-            }
+        summary = "Загрузить книгу (файл + метаданные)",
+        description = "Загружает файл книги и сохраняет метаданные (название, автор, описание, userId). Файл обязателен."
     )
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Long> uploadBook(@RequestParam("file") MultipartFile file, @RequestParam Long userId) {
-        if (file.isEmpty()) {
-            return ResponseEntity.badRequest().body(null);
+    public ResponseEntity<?> uploadBook(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("userId") Long userId,
+            @RequestParam("title") String title,
+            @RequestParam("author") String author,
+            @RequestParam("description") String description
+    ) {
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.badRequest().body("Файл пустой");
         }
         try {
             String uploadDir = System.getProperty("user.dir") + File.separator + "books";
             File dir = new File(uploadDir);
             if (!dir.exists()) dir.mkdirs();
-
             String filePath = uploadDir + File.separator + file.getOriginalFilename();
             file.transferTo(new File(filePath));
-
-            BookRequest bookRequest = new BookRequest();
-            bookRequest.setTitle(file.getOriginalFilename());
-            bookRequest.setUserId(userId);
-            BookResponse bookResponse = bookService.createBook(bookRequest);
-
-            bookConversionService.convertBookToHtml(filePath, bookResponse.getId());
-
-            return ResponseEntity.ok(bookResponse.getId());
+            // Сохраняем метаданные книги
+            BookEntity book = new BookEntity();
+            book.setTitle(title);
+            book.setAuthor(author);
+            book.setDescription(description);
+            book.setUserId(userId);
+            book.setConverted(false);
+            bookRepository.save(book);
+            // Запускаем асинхронную конвертацию
+            bookConversionService.convertBookToHtml(filePath, book.getId());
+            return ResponseEntity.ok(book.getId());
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Ошибка загрузки: " + e.getMessage());
         }
-    }
-
-    @Operation(
-            summary = "Создать новую книгу",
-            description = "Добавляет новую книгу в систему. Отправьте данные книги в теле запроса в формате JSON (BookRequest). Возвращает созданную книгу с присвоенным ID.",
-            responses = {
-                    @ApiResponse(responseCode = "201", description = "Книга успешно создана"),
-                    @ApiResponse(responseCode = "400", description = "Неверные данные запроса")
-            }
-    )
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public BookResponse createBook(@RequestBody BookRequest request) {
-        return bookService.createBook(request);
     }
 
     @Operation(
@@ -114,19 +101,6 @@ public class BookController {
     @GetMapping
     public List<BookResponse> getAllBooks() {
         return bookService.getAllBooks();
-    }
-
-    @Operation(
-            summary = "Получить книгу по ID",
-            description = "Возвращает детали книги по её `id`. Укажите ID в пути. Если книга не найдена, возвращает 404.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Книга успешно найдена"),
-                    @ApiResponse(responseCode = "404", description = "Книга не найдена")
-            }
-    )
-    @GetMapping("/{id}")
-    public BookResponse getBookById(@PathVariable Long id) {
-        return bookService.getBookById(id);
     }
 
     @Operation(
@@ -203,7 +177,7 @@ public class BookController {
 
     @Operation(
         summary = "Получить подробную информацию о книге",
-        description = "Возвращает подробную информацию о книге: владелец, пользователи с доступом, полки."
+        description = "Возвращает подробную информацию о книге: владелец, пользователи с доступом, полки. Доступно всем авторизованным."
     )
     @GetMapping("/{id}/details")
     public ResponseEntity<BookDetailsResponse> getBookDetails(@PathVariable Long id) {
